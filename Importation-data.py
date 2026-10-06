@@ -160,7 +160,7 @@ commerce_etats = imports_totaux.merge(
 def categorie_hs(hs):
     try:
         h = int(hs)
-    except:
+    except (TypeError, ValueError):
         return "Autres"
 
     if 1 <= h <= 5:
