@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from tabulate import tabulate
 import plotly.express as px
 
+pd.set_option("display.float_format", "{:.2f}".format) #enlever les écritures scientifiques 
+
 data = pd.read_csv('/home/onyxia/work/commerce_etats_2025.csv')
 print(data.head())
 
