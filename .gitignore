@@ -1,0 +1,19 @@
+# Fichiers temporaires Python
+__pycache__/
+*.py[cod]
+
+# Environnements Python locaux
+.venv/
+venv/
+env/
+
+# Sauvegardes automatiques Jupyter
+.ipynb_checkpoints/
+
+# Identifiants et paramètres privés
+.env
+.env.*
+!.env.example
+
+# Fichiers macOS
+.DS_Store
