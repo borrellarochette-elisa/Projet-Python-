@@ -5,7 +5,7 @@ import pandas as pd
 # PARAMETRES
 # ============================================================
 
-API_KEY = "212e171697be7d72b0781dd11e4755dbff99eee2"
+API_KEY = "7f8c6c8b349cc9fec3fe5f7af79015cac587e76b"
 
 # Décembre + variable _YR = total cumulé de l'année 2025
 DATE = "2025-12"
