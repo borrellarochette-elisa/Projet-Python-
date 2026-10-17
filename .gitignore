@@ -19,3 +19,6 @@ env/
 
 # Fichiers macOS
 .DS_Store
+
+# Eviter l'ajout à GitHub
+/Test-autre-dataset/data/ 
