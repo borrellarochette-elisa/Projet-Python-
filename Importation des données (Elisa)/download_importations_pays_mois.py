@@ -1,3 +1,5 @@
+#On récupère les données sur les imporations des USA
+
 import requests     # package pour demander les données au site Census
 import pandas as pd
 from pathlib import Path
@@ -25,7 +27,7 @@ dataset = dataset[dataset["CTY_CODE"] != "-"].copy()     # on enlève la ligne c
 dataset = dataset.drop(columns=["SUMMARY_LVL"])      # on enlève la colonne SUMMARY_LVL qui contient toujours DET (filtre pour avoir tous les pays)
 # print(dataset[["CTY_CODE", "CTY_NAME"]].to_string(index=False))     # afficher tous les partenaires des USA
 
-# On transforme les colonnes contenant des montants en nombres 
+# On transforme les colonnes contenant des montants en nombres
 dataset["GEN_VAL_MO"] = pd.to_numeric(dataset["GEN_VAL_MO"])
 dataset["CON_VAL_MO"] = pd.to_numeric(dataset["CON_VAL_MO"])
 dataset["CAL_DUT_MO"] = pd.to_numeric(dataset["CAL_DUT_MO"])
@@ -37,7 +39,7 @@ print(dataset.head())
 dossier_data = Path(__file__).resolve().parent / "data"
 dossier_data.mkdir(exist_ok=True)     # création d'un dossier data
 
-fichier = dossier_data / f"imports_{periode}.csv" 
+fichier = dossier_data / f"imports_{periode}.csv"
 dataset.to_csv(fichier, index=False)
 
 
@@ -59,14 +61,13 @@ for periode in periodes:
     dataset = dataset[dataset["CTY_CODE"] != "-"].copy()     # on enlève la ligne correspondant au total de tous les pays
     dataset = dataset.drop(columns=["SUMMARY_LVL"])      # on enlève la colonne SUMMARY_LVL qui contient toujours DET (filtre pour avoir tous les pays)
 
-    # On transforme les colonnes contenant des montants en nombres 
+    # On transforme les colonnes contenant des montants en nombres
     dataset["GEN_VAL_MO"] = pd.to_numeric(dataset["GEN_VAL_MO"])
     dataset["CON_VAL_MO"] = pd.to_numeric(dataset["CON_VAL_MO"])
     dataset["CAL_DUT_MO"] = pd.to_numeric(dataset["CAL_DUT_MO"])
 
     # Enregistrement sous CSV
-    fichier = dossier_data / f"imports_{periode}.csv" 
+    fichier = dossier_data / f"imports_{periode}.csv"
     dataset.to_csv(fichier, index=False)
 
 print("Importation réussie")
-

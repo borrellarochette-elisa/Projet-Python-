@@ -21,4 +21,4 @@ env/
 .DS_Store
 
 # Eviter l'ajout à GitHub des données
-/Importation données (Elisa)/data/
+/Importation des données (Elisa)/data/
