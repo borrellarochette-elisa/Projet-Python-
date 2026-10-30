@@ -18,6 +18,9 @@ for periode in periodes:
 
 print("Mois manquants :", missing)
 
+if len(missing) != 0:
+    raise SystemExit("Arrêt du programme car des mois sont manquants")
+
 
 # On réunit nos données dans un seul dataset
 all_tables = []
@@ -29,7 +32,7 @@ for periode in periodes:                                # On crée un tableau de
 
 print(len(all_tables))
 
-importations_usa = pd.concat(all_tables, ignore_index = True)     # Concaténation dans un seul grand tableau
+importations_usa = pd.concat(all_tables, ignore_index = True)     # Concaténation dans un seul grand tableau (empiler les lignes)
 print(importations_usa.shape)
 
 # Enregistrement sous CSV du dataset complet 

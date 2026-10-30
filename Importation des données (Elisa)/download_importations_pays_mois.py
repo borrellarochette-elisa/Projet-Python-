@@ -70,4 +70,4 @@ for periode in periodes:
     fichier = dossier_data / f"imports_{periode}.csv"
     dataset.to_csv(fichier, index=False)
 
-print("Importation réussie")
+print("Importation terminée")
