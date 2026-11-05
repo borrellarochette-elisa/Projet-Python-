@@ -41,3 +41,39 @@ print(
 # Voir la valeur maximale des droits de douane dans tout le dataset
 print("\nValeur max des droits de douane :", df['droits_douane'].max())
 
+
+
+# 1. Définition du chemin et chargement des données
+dossier_projet = Path(
+    "/home/onyxia/work/Projet-Python-/Importation des données (Elisa)"
+)
+chemin_fichier = dossier_projet / "data" / "commerce_usa_2010_2025.csv"
+
+df = pd.read_csv(chemin_fichier)
+
+print("--- Dataset chargé avec succès ! ---")
+print(f"Dimensions : {df.shape[0]} lignes et {df.shape[1]} colonnes")
+
+# 2. Création de la colonne douane_pourcentage
+df['douane_pourcentage'] = (df['droits_douane'] / df['importations_generales']) * 100
+df['douane_pourcentage'] = df['douane_pourcentage'].fillna(0)
+
+# 3. Statistiques descriptives de la nouvelle colonne
+print("\n" + "=" * 65)
+print("STATISTIQUES DESCRIPTIVES : douane_pourcentage")
+print("=" * 65)
+print(df['douane_pourcentage'].describe().round(4))
+
+# 4. Top 10 des pays avec les taux de douane moyens les plus élevés
+print("\n" + "=" * 65)
+print("TOP 10 DES PARTENAIRES AVEC LE TAUX DE DOUANE MOYEN LE PLUS ÉLEVÉ")
+print("=" * 65)
+top_taux_pays = (
+    df.groupby('CTY_NAME')['douane_pourcentage']
+    .mean()
+    .sort_values(ascending=False)
+    .head(10)
+)
+
+for rang, (pays, taux) in enumerate(top_taux_pays.items(), 1):
+    print(f"{rang}. {pays} : {taux:.2f} % en moyenne")
