@@ -4,7 +4,7 @@ import requests     # package pour demander les données au site Census
 import pandas as pd
 from pathlib import Path
 
-cle_api = input("Coller la clé Census puis appuyer sur Entrée :").strip()
+cle_api = "7f8c6c8b349cc9fec3fe5f7af79015cac587e76b"
 url_imports = "https://api.census.gov/data/timeseries/intltrade/imports/hs"
 
 
