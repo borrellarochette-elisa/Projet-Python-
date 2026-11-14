@@ -20,5 +20,5 @@ env/
 # Fichiers macOS
 .DS_Store
 
-# Eviter l'ajout à GitHub des données
-/Importation des données (Elisa)/data/
+# Eviter l'ajout à GitHub des données (tous les dossiers "data", où qu'ils soient)
+data/
