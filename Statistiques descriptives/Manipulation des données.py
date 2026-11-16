@@ -119,3 +119,61 @@ plt.tight_layout()
 plt.savefig("top10_taux_douane.png", dpi=300)
 plt.close()
 print("Graphique 2 sauvegardé : top10_taux_douane.png")
+
+
+
+# 10. Evolution moyenne des droits de douane comparaison dans le temps
+# Conversion de la colonne 'time' en datetime pour filtrer facilement les années
+df['time_dt'] = pd.to_datetime(df['time'])
+df['annee'] = df['time_dt'].dt.year
+
+# On filtre les anomalies techniques/économiques (taux > 100% ou == 0 si on veut se baser uniquement sur les flux imposés, ou <= 100%)
+df_propre = df[(df['douane_pourcentage'] > 0) & (df['douane_pourcentage'] <= 100)].copy()
+
+# Découpage en deux périodes : Historique (2010-2024) vs Récente (2025-2026)
+periode_historique = df_propre[df_propre['annee'] < 2025]
+periode_recente = df_propre[df_propre['annee'] >= 2025]
+
+# Calcul des moyennes globales ou par pays
+print("=" * 65)
+print("COMPARAISON DES TAUX DE DOUANE MOYENS ENTRE LES PÉRIODES")
+print("=" * 65)
+print(f"Moyenne (2010 - 2024) : {periode_historique['douane_pourcentage'].mean():.2f} %")
+print(f"Moyenne récente (2025 - 2026) : {periode_recente['douane_pourcentage'].mean():.2f} %")
+
+# Comparaison du Top 5 des pays entre les deux périodes (en ratio cumulé)
+def calcul_top_periode(sous_df, nom_periode):
+    totaux = sous_df.groupby('CTY_NAME')[['droits_douane', 'importations_generales']].sum()
+    totaux['taux'] = (totaux['droits_douane'] / totaux['importations_generales']) * 100
+    top = totaux['taux'].sort_values(ascending=False).head(5)
+    print(f"\n--- Top 5 des pays ({nom_periode}) ---")
+    for pays, taux in top.items():
+        print(f"• {pays} : {taux:.2f} %")
+
+calcul_top_periode(periode_historique, "2010-2024")
+calcul_top_periode(periode_recente, "2025-2026")
+
+
+# 11 Résultats significatifs ? 
+from scipy import stats
+
+# Isoler les séries de données propres (sans les anomalies)
+série_historique = periode_historique['douane_pourcentage']
+série_recente = periode_recente['douane_pourcentage']
+
+# Réaliser un test de Student (t-test) pour comparer les moyennes
+t_stat, p_value = stats.ttest_ind(série_historique, série_recente, equal_var=False)
+
+# Afficher les résultats
+print("=" * 65)
+print("TEST STATISTIQUE DE COMPARAISON DES MOYENNES (BALANCE CHECK)")
+print("=" * 65)
+print(f"Moyenne 2010-2024 : {série_historique.mean():.2f} %")
+print(f"Moyenne 2025-2026 : {série_recente.mean():.2f} %")
+print(f"Statistique t     : {t_stat:.4f}")
+print(f"P-value           : {p_value:.4e}")  # Format scientifique
+
+if p_value < 0.001:
+    print("\n Résultat : La différence est TRES SIGNIFICATIVE (p < 0.001).")
+else:
+    print(f"\n Résultat : P-value = {p_value}")
