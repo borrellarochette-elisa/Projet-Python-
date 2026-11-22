@@ -71,59 +71,59 @@ fig = px.choropleth(
 )
 
 fig.write_html("Statistiques descriptives/Cartes/carte_dynamique_douanes.html")        
-
+fig.show()
 #--------------------------------------------------------------------
-#  Carte dynamique représentant l'évolution des exportations en %.
+#  Carte dynamique représentant l'évolution des importations_generales en %.
 #--------------------------------------------------------------------
 
-# Création de la variable : variation des exportations par rapport à la moyenne
-# roulante des exportations sur les 12 derniers mois  
-df["exports_moy_12m"] = (
-    df.groupby("CTY_NAME")["exportations"]
+# Création de la variable : variation des importations_generales par rapport à la moyenne
+# roulante des importations_generales sur les 12 derniers mois  
+df["imports_moy_12m"] = (
+    df.groupby("CTY_NAME")["importations_generales"]
     .transform(lambda s: s.shift(1).rolling(12).mean())
 )
 
-df["delta_exports_roulant"] = (df["exportations"] - df["exports_moy_12m"]) / df["exports_moy_12m"] * 100
+df["delta_imports_roulant"] = (df["importations_generales"] - df["imports_moy_12m"]) / df["imports_moy_12m"] * 100
 
 df_anim = df.sort_values("time")
 fig = px.choropleth(
     df_anim,
     locations="ISO3",
-    color="delta_exports_roulant",
+    color="delta_imports_roulant",
     hover_name="CTY_NAME",
     animation_frame="time",                
     color_continuous_scale=["darkred", "white", "darkgreen"],
     range_color=(-20, 20),
     projection="natural earth",
-    title="Exportations vers les États-Unis"
+    title="importations_generales vers les États-Unis"
 )
 
 fig.show()
-fig.write_html("Statistiques descriptives/Cartes/carte_dynamique_exportations.html") 
+fig.write_html("Statistiques descriptives/Cartes/carte_dynamique_importations_generales.html") 
 
 #--------------------------------------------------------------------
-#  Carte dynamique représentant l'évolution des exportations après avril 2025.
+#  Carte dynamique représentant l'évolution des importations_generales après avril 2025.
 #--------------------------------------------------------------------
 
-ref_mars = df[df["time"] == "2025-03"].set_index("CTY_NAME")["exportations"]
+ref_mars = df[df["time"] == "2025-03"].set_index("CTY_NAME")["importations_generales"]
 
 # On ne garde que les mois à partir d'avril 2025
 df_avril = df[df["time"] >= "2025-03"].copy()
 reference = df_avril["CTY_NAME"].map(ref_mars)      
-df_avril["delta_exports_from_april"] = ((df_avril["exportations"] - reference) / reference * 100)
+df_avril["delta_imports_from_april"] = ((df_avril["importations_generales"] - reference) / reference * 100)
 
-df_anim = df_avril.dropna(subset=["ISO3", "delta_exports_from_april"]).sort_values("time")
+df_anim = df_avril.dropna(subset=["ISO3", "delta_imports_from_april"]).sort_values("time")
 fig = px.choropleth(
     df_anim,
     locations="ISO3",
-    color="delta_exports_from_april",
+    color="delta_imports_from_april",
     hover_name="CTY_NAME",
     animation_frame="time",
     color_continuous_scale=["darkred", "white", "darkgreen"],
     range_color=(-40, 40),
     projection="natural earth",
-    title="Exportations des États-Unis vers chaque pays (variation par rapport à Mars 2025, %)",
+    title="importations_generales des États-Unis vers chaque pays (variation par rapport à Mars 2025, %)",
 )
 
 fig.show()
-fig.write_html("Statistiques descriptives/Cartes/carte_dynamique_exportations_from_april_2025.html") 
+fig.write_html("Statistiques descriptives/Cartes/carte_dynamique_importations_generales_from_april_2025.html") 

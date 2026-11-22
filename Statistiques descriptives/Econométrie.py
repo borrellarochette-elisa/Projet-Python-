@@ -53,17 +53,17 @@ df["douane_en_%"] = df["douane_en_%"].replace([np.inf, -np.inf], np.nan) # Netto
 # Moyenne des droits de douane sur l'année avant  04-2025
 avant = (
     df[(df["time"] >= "2024-04") & (df["time"] < "2025-04")]
-    .groupby(["CTY_NAME", "ISO3"], as_index=False)[["douane_en_%", "exportations"]]
+    .groupby(["CTY_NAME", "ISO3"], as_index=False)[["douane_en_%", "importations_generales"]]
     .mean()
-    .rename(columns={"douane_en_%": "douane_moy_avant", "exportations": "exportations_avant"})
+    .rename(columns={"douane_en_%": "douane_moy_avant", "importations_generales": "importations_generales_avant"})
 )
 
 # Moyenne des droits de douane après 04-2025
 apres = (
     df[(df["time"] >= "2025-04")]
-    .groupby(["CTY_NAME", "ISO3"], as_index=False)[["douane_en_%", "exportations"]]
+    .groupby(["CTY_NAME", "ISO3"], as_index=False)[["douane_en_%", "importations_generales"]]
     .mean()
-    .rename(columns={"douane_en_%": "douane_moy_apres", "exportations": "exportations_apres"})
+    .rename(columns={"douane_en_%": "douane_moy_apres", "importations_generales": "importations_generales_apres"})
 )
 
 # Création du df pour le DiD
@@ -72,15 +72,15 @@ df_DiD = avant.merge(apres, on=["CTY_NAME", "ISO3"], how="outer")
 # Séparation en groupe control et groupe traité 
 df_DiD["traite"] = (df_DiD["douane_moy_apres"] - df_DiD["douane_moy_avant"] > 8).astype(int)
 
-df_DiD["var_exportations"] = ((df_DiD["exportations_apres"] - df_DiD["exportations_avant"])/df_DiD["exportations_avant"])*100
+df_DiD["var_importations_generales"] = ((df_DiD["importations_generales_apres"] - df_DiD["importations_generales_avant"])/df_DiD["importations_generales_avant"])*100
 
-# On flitre pour enlever les petits pays avec qui exportent exportent <1M/mois au USA
-df_DiD_filtered = df_DiD[df_DiD["exportations_avant"] > 1000000]
-effet_causal_DiD = df_DiD_filtered[df_DiD_filtered["traite"] == 1]["var_exportations"].mean() - df_DiD_filtered[df_DiD_filtered["traite"] == 0]["var_exportations"].mean()
+# On flitre pour enlever les petits pays avec qui exportent <1M/mois au USA
+df_DiD_filtered = df_DiD[df_DiD["importations_generales_avant"] > 1000000]
+effet_causal_DiD = df_DiD_filtered[df_DiD_filtered["traite"] == 1]["var_importations_generales"].mean() - df_DiD_filtered[df_DiD_filtered["traite"] == 0]["var_importations_generales"].mean()
 
 # Test sur de comparaison de moyenne 
-traites = df_DiD_filtered.loc[df_DiD_filtered["traite"] == 1, "var_exportations"].dropna()
-temoins = df_DiD_filtered.loc[df_DiD_filtered["traite"] == 0, "var_exportations"].dropna()
+traites = df_DiD_filtered.loc[df_DiD_filtered["traite"] == 1, "var_importations_generales"].dropna()
+temoins = df_DiD_filtered.loc[df_DiD_filtered["traite"] == 0, "var_importations_generales"].dropna()
 test = stats.ttest_ind(traites, temoins, equal_var=False)    # equal_var=False = test de Welch
 
 print(f"l'effet causal mesuré par le DiD simple est de {effet_causal_DiD}")
@@ -100,30 +100,30 @@ df_DiD_control["log_distance"] = np.log(df_DiD_control["distance_usa_km"])
 # On passe au format long 
 df_long = pd.concat(
     [
-        df_DiD_control.assign(post=0, exportations=df_DiD_control["exportations_avant"]),
-        df_DiD_control.assign(post=1, exportations=df_DiD_control["exportations_apres"]),
+        df_DiD_control.assign(post=0, importations_generales=df_DiD_control["importations_generales_avant"]),
+        df_DiD_control.assign(post=1, importations_generales=df_DiD_control["importations_generales_apres"]),
     ],
     ignore_index=True,
 )
-df_long["log_export"] = np.log(df_long["exportations"])
+df_long["log_import"] = np.log(df_long["importations_generales"])
 
 # On définit le set de variable pour l'OLS
-variables = ["log_export", "traite", "post", "ISO3", "log_pib", "log_pib_hab", "log_distance", "inflation"]
+variables = ["log_import", "traite", "post", "ISO3", "log_pib", "log_pib_hab", "log_distance", "inflation"]
 reg = df_long.dropna(subset=variables)
 
 # On applique l'OLS 
 did_controles = smf.ols(
-    "log_export ~ traite * post + (log_pib + log_pib_hab + log_distance + inflation) * post",
+    "log_import ~ traite * post + (log_pib + log_pib_hab + log_distance + inflation) * post",
     data=reg,
 ).fit(cov_type="cluster", cov_kwds={"groups" : reg["ISO3"]})
 print(did_controles.summary())
 
 print(
     "\n" + "-" * 80 + "\n"
-    "Sur les partenaires recevant au moins 1 M$/mois d'exportations US avant avril 2025, "
-    "l'effet du DiD n'est pas significatif et change même de sens avec les contrôles :\n"
+    "Sur les partenaires exportant au moins 1 M$/mois d'importations_generales US avant avril 2025, "
+    "l'effet du DiD n'est pas significatif :\n"
     f"  - sans contrôle  : effet = {effet_causal_DiD:.2f}, p-value = {test.pvalue:.3f}\n"
     f"  - avec contrôles : coef = {did_controles.params['traite:post']:.3f}, p-value = {did_controles.pvalues['traite:post']:.3f}\n"
-    "Finalement on observe un effet significatif des droits de douane sur les exportations\n"
+    "Finalement on observe pas d'effet significatif des droits de douane sur les importations_generales\n"
     + "-" * 80
 )
