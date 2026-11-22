@@ -1,9 +1,11 @@
 # Importation des packages 
 
 import pandas as pd
+import numpy as np
 from pathlib import Path
-import plotly.express as px # Package utilisé pour les cartes 
-import pycountry # Packages utilisé pour encodé le noms des pays pour les cartes     
+import plotly.express as px # Package utilisé pour les cartes      
+import country_converter as coco # Packages utilisé pour encodé le noms des pays pour les cartes
+import logging
 
 # Importation du dataset commerce_usa_2010_2025.csv
 
@@ -11,24 +13,43 @@ df = pd.read_csv(r'Importation des données (Elisa)\data\commerce_usa_2010_2025.
 
 # Création de la variable droits_douane en %
 
-df['douane_en_%'] = (df['droits_douane']/ df['importations_generales'])*100
-
-print(df['douane_en_%'].head(50))
+df['douane_en_%'] = 0.0
+masque = df['importations_generales'] > 0
+df.loc[masque, 'douane_en_%'] = (
+    df.loc[masque, 'droits_douane'] / df.loc[masque, 'importations_generales']
+) * 100
+df['douane_en_%'] = df['douane_en_%'].replace([np.inf, -np.inf], 0).fillna(0)
 
 # Encodage des noms des pays pour les cartes
 
-def trouver_iso3(nom):
-    if pd.isna(nom):
-        return None
+logging.getLogger("country_converter.country_converter").setLevel(logging.ERROR) # Supprime les alertes
+cc = coco.CountryConverter()
 
-    try:
-        pays = pycountry.countries.lookup(nom.strip())
-        return pays.alpha_3
+codes_iso3 = {}
+for nom in df["CTY_NAME"].dropna().unique():
+    code = cc.convert(names=nom, to="ISO3")
+    
+    if isinstance(code, list) or code == "not found":
+        print(f"{nom} not found in regex")
+        code = pd.NA
 
-    except LookupError:
-        return None
+    codes_iso3[nom] = (code)
 
-df["ISO3"] = df["CTY_NAME"].map(trouver_iso3) # colonne de noms des pays encodés en ISO3
+df["ISO3"] = df["CTY_NAME"].map(codes_iso3) # colonne de noms des pays encodés en ISO3
+
+pays_en_echec = df.loc[
+    df["ISO3"].isna(), "CTY_NAME"
+]
+print(pays_en_echec.value_counts(dropna=False))
+
+corrections = {
+    "WEST BANK ADMINISTERED BY ISRAEL": "PSE",
+    "GAZA STRIP ADMINISTERED BY ISRAEL": "PSE",
+    "NAOERO": "NRU",
+    "NETHERLANDS ANTILLES": "ANT",
+}
+
+df["ISO3"] = df["CTY_NAME"].map(corrections).fillna(df["ISO3"])
 
 #--------------------------------------------------------------------
 #  Carte statique représentant les droits de douane sur l'année 2025. 
@@ -102,28 +123,35 @@ fig.show()
 fig.write_html("Statistiques descriptives/Cartes/carte_dynamique_importations_generales.html") 
 
 #--------------------------------------------------------------------
-#  Carte dynamique représentant l'évolution des importations_generales après avril 2025.
+#  Carte dynamique représentant l'évolution des importations_generales 
+#  par rapport au même mois de 2024.
 #--------------------------------------------------------------------
 
-ref_mars = df[df["time"] == "2025-03"].set_index("CTY_NAME")["importations_generales"]
+df["date"] = pd.to_datetime(df["time"])
+df["annee"] = df["date"].dt.year
+df["mois"] = df["date"].dt.month
 
-# On ne garde que les mois à partir d'avril 2025
-df_avril = df[df["time"] >= "2025-03"].copy()
-reference = df_avril["CTY_NAME"].map(ref_mars)      
-df_avril["delta_imports_from_april"] = ((df_avril["importations_generales"] - reference) / reference * 100)
+# Référence : le même mois en 2024
+ref_2024 = (
+    df[df["annee"] == 2024][["CTY_NAME", "mois", "importations_generales"]]
+    .rename(columns={"importations_generales": "imports_2024"})
+)
 
-df_anim = df_avril.dropna(subset=["ISO3", "delta_imports_from_april"]).sort_values("time")
+df_2025 = df[df["annee"] == 2025].merge(ref_2024, on=["CTY_NAME", "mois"], how="left")
+df_2025["var_vs_2024"] = (df_2025["importations_generales"] / df_2025["imports_2024"] - 1) * 100
+
+df_anim = df_2025.dropna(subset=["ISO3", "var_vs_2024"]).sort_values("date")
+
 fig = px.choropleth(
     df_anim,
     locations="ISO3",
-    color="delta_imports_from_april",
+    color="var_vs_2024",
     hover_name="CTY_NAME",
     animation_frame="time",
     color_continuous_scale=["darkred", "white", "darkgreen"],
     range_color=(-40, 40),
     projection="natural earth",
-    title="importations_generales des États-Unis vers chaque pays (variation par rapport à Mars 2025, %)",
+    title="Importations des États-Unis (variation par rapport au même mois de 2024, %)",
 )
-
 fig.show()
-fig.write_html("Statistiques descriptives/Cartes/carte_dynamique_importations_generales_from_april_2025.html") 
+fig.write_html("Statistiques descriptives/Cartes/carte_dynamique_importations_generales_variation.html") 

@@ -91,7 +91,7 @@ print(f"t = {test.statistic:.2f}, p-value = {test.pvalue:.3f}")
 # ------------------------------------------------
 
 # on ajoute les contrôles et on définit les valeurs en log
-controles = df_wb.loc[df_wb["annee"] == 2024, ["ISO3", "pib_usd", "pib_hab_ppa", "distance_usa_km", "inflation"]]
+controles = df_wb.loc[df_wb["annee"] == 2024, ["ISO3", "pib_usd", "pib_hab_ppa", "distance_usa_km", "inflation", "superficie_km2"]]
 df_DiD_control = df_DiD_filtered.merge(controles, on="ISO3", how="left", validate="m:1")
 df_DiD_control["log_pib"] = np.log(df_DiD_control["pib_usd"])
 df_DiD_control["log_pib_hab"] = np.log(df_DiD_control["pib_hab_ppa"])
@@ -108,12 +108,12 @@ df_long = pd.concat(
 df_long["log_import"] = np.log(df_long["importations_generales"])
 
 # On définit le set de variable pour l'OLS
-variables = ["log_import", "traite", "post", "ISO3", "log_pib", "log_pib_hab", "log_distance", "inflation"]
+variables = ["log_import", "traite", "post", "ISO3", "log_pib", "log_pib_hab", "log_distance", "inflation", "superficie_km2"]
 reg = df_long.dropna(subset=variables)
 
 # On applique l'OLS 
 did_controles = smf.ols(
-    "log_import ~ traite * post + (log_pib + log_pib_hab + log_distance + inflation) * post",
+    "log_import ~ traite * post + (log_pib + log_pib_hab + log_distance + inflation + superficie_km2) * post",
     data=reg,
 ).fit(cov_type="cluster", cov_kwds={"groups" : reg["ISO3"]})
 print(did_controles.summary())
