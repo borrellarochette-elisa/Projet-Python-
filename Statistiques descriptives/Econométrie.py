@@ -9,9 +9,10 @@ import statsmodels.formula.api as smf
 from scipy import stats
 from scipy.spatial.distance import cdist
 
-# Importation du dataset commerce_usa_2010_2025.csv
+# Importation du dataset commerce_usa_2010_2025.csv depuis le stockage partagé (comme dans le notebook)
 
-df = pd.read_csv(r'Importation des données (Elisa)\data\commerce_usa_2010_2025.csv', sep = ',')
+url = "https://minio.lab.sspcloud.fr/elisaborrel/diffusion/commerce_usa/commerce_usa_2010_2025.csv"
+df = pd.read_csv(url, dtype={"CTY_CODE": str})
 
 # Création de la variable droits_douane en %
 
