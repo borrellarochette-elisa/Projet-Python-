@@ -1,22 +1,19 @@
-from pathlib import Path
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
 
-# 1. Définition du chemin vers le dossier de ton projet
-dossier_projet = Path(
-    "/home/onyxia/work/Projet-Python-/Importation des données (Elisa)"
-)
-chemin_fichier = dossier_projet / "data" / "commerce_usa_2010_2025.csv"
-
-# 2. Chargement des données dans Pandas
-df = pd.read_csv(chemin_fichier)
+# 1 & 2. Chargement des données directement depuis le stockage cloud (MinIO)
+url = "https://minio.lab.sspcloud.fr/elisaborrel/diffusion/commerce_usa/commerce_usa_2010_2025.csv"
+commerce_usa = pd.read_csv(url, dtype={"CTY_CODE": str})
+df = commerce_usa.copy()
 
 # 3. Vérification du chargement
 print("--- Dataset chargé avec succès ! ---")
 print(f"Dimensions : {df.shape[0]} lignes et {df.shape[1]} colonnes")
 print("\nAperçu des 5 premières lignes :")
 print(df.head())
-
 
 # 4. Création sécurisée de la colonne de pourcentage (anti-division par zéro et anti-inf)
 df['douane_pourcentage'] = 0.0
@@ -39,16 +36,14 @@ print(
 
 print("\nValeur max des droits de douane :", df['droits_douane'].max())
 
-
 # 6. Statistiques descriptives de la nouvelle colonne
 print("\n" + "=" * 65)
 print("STATISTIQUES DESCRIPTIVES : douane_pourcentage")
 print("=" * 65)
 print(df['douane_pourcentage'].describe().round(4))
 
-# 6bis. Dans le cas ou le pourcentage de droits de douanes est non nul seulement 
+# 6bis. Taux non nuls
 df_avec_douanes = df[df['douane_pourcentage'] > 0]
-
 print(f"\nNombre de lignes avec un taux de douane non nul : {len(df_avec_douanes)} sur {len(df)} total")
 
 print("\n" + "=" * 65)
@@ -56,38 +51,31 @@ print("STATISTIQUES DESCRIPTIVES : douane_pourcentage (Taux > 0 %)")
 print("=" * 65)
 print(df_avec_douanes['douane_pourcentage'].describe().round(4))
 
-# 6bis'. Dans le cas ou le pourcentage de droits de douanes est non nul seulement / enlevant les valeurs aberrantes
-df_filtre = df[(df['douane_pourcentage'] > 0) & (df['douane_pourcentage'] <= 100)]
+# 6bis'. Taux non nuls et <= 200 %
+df_filtre = df[(df['douane_pourcentage'] > 0) & (df['douane_pourcentage'] <= 200)]
 print(f"Nombre de lignes après nettoyage des anomalies : {len(df_filtre)} sur {len(df)}")
 print("\n" + "=" * 65)
-print("STATISTIQUES DESCRIPTIVES : douane_pourcentage (Taux entre 0% et 100%)")
+print("STATISTIQUES DESCRIPTIVES : douane_pourcentage (Taux entre 0% et 200%)")
 print("=" * 65)
 print(df_filtre['douane_pourcentage'].describe().round(4))
 
-
-# 7. Analyse des  anomalies (taux strictement supérieur à 100 %)
-anomalies = df[df['douane_pourcentage'] > 100].sort_values(
+# 7. Analyse des anomalies (taux strictement supérieur à 200 %)
+anomalies = df[df['douane_pourcentage'] > 200].sort_values(
     by='douane_pourcentage', ascending=False
 )
 
 print("\n" + "=" * 65)
-print(f"ANOMALIES DÉTECTÉES (Taux > 100 %) : {len(anomalies)} lignes au total")
+print(f"ANOMALIES DÉTECTÉES (Taux > 200 %) : {len(anomalies)} lignes au total")
 print("=" * 65)
-
 print(
     anomalies[
         ['CTY_NAME', 'time', 'importations_generales', 'droits_douane', 'douane_pourcentage']
     ].head(20).to_string()
 )
 
-
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# 8. Evolution temporelle des droits de douane (convertir la colonne 'time' en format datetime)
+# 8. Evolution temporelle des droits de douane
 df['time'] = pd.to_datetime(df['time'])
-df_temp = df[df['douane_pourcentage'] <= 100].groupby('time')['douane_pourcentage'].mean().reset_index()
+df_temp = df[df['douane_pourcentage'] <= 200].groupby('time')['douane_pourcentage'].mean().reset_index()
 
 plt.figure(figsize=(12, 6))
 sns.lineplot(data=df_temp, x='time', y='douane_pourcentage', color='b', linewidth=2)
@@ -98,49 +86,38 @@ plt.grid(True, linestyle='--', alpha=0.6)
 plt.savefig("evolution_douanes.png", dpi=300, bbox_inches="tight")
 print("Graphique sauvegardé avec succès sous 'evolution_douanes.png' !")
 
-
-# 9. Top 10 (en ignorant les anomalies)
-totaux_pays = df[df['douane_pourcentage'] <= 100].groupby('CTY_NAME')[['droits_douane', 'importations_generales']].sum()
+# 9. Top 10 (en ignorant les anomalies > 200 %)
+totaux_pays = df[df['douane_pourcentage'] <= 200].groupby('CTY_NAME')[['droits_douane', 'importations_generales']].sum()
 totaux_pays['taux_global'] = (totaux_pays['droits_douane'] / totaux_pays['importations_generales']) * 100
 
-# On prend le Top 10 et on trie dans l'ordre croissant pour l'affichage horizontal
 top_10 = totaux_pays['taux_global'].sort_values(ascending=True).tail(10)
 
 plt.figure(figsize=(10, 6))
 top_10.plot(kind='barh', color='#2ca02c', edgecolor='black', alpha=0.85)
-
 plt.title("Top 10 des partenaires par taux de douane global cumulé", fontsize=14, fontweight='bold')
 plt.xlabel("Taux de douane effectif global (%)", fontsize=12)
 plt.ylabel("Pays partenaire", fontsize=12)
 plt.grid(axis='x', linestyle='--', alpha=0.6)
 plt.tight_layout()
-
 plt.savefig("top10_taux_douane.png", dpi=300)
 plt.close()
 print("Graphique 2 sauvegardé : top10_taux_douane.png")
 
-
-
-# 10. Evolution moyenne des droits de douane comparaison dans le temps
-# Conversion de la colonne 'time' en datetime pour filtrer facilement les années
+# 10. Evolution moyenne des droits de douane : comparaison dans le temps
 df['time_dt'] = pd.to_datetime(df['time'])
 df['annee'] = df['time_dt'].dt.year
 
-# On filtre les anomalies techniques/économiques (taux > 100% ou == 0 si on veut se baser uniquement sur les flux imposés, ou <= 100%)
-df_propre = df[(df['douane_pourcentage'] > 0) & (df['douane_pourcentage'] <= 100)].copy()
+df_propre = df[(df['douane_pourcentage'] > 0) & (df['douane_pourcentage'] <= 200)].copy()
 
-# Découpage en deux périodes : Historique (2010-2024) vs Récente (2025-2026)
 periode_historique = df_propre[df_propre['annee'] < 2025]
 periode_recente = df_propre[df_propre['annee'] >= 2025]
 
-# Calcul des moyennes globales ou par pays
 print("=" * 65)
 print("COMPARAISON DES TAUX DE DOUANE MOYENS ENTRE LES PÉRIODES")
 print("=" * 65)
 print(f"Moyenne (2010 - 2024) : {periode_historique['douane_pourcentage'].mean():.2f} %")
 print(f"Moyenne récente (2025 - 2026) : {periode_recente['douane_pourcentage'].mean():.2f} %")
 
-# Comparaison du Top 5 des pays entre les deux périodes (en ratio cumulé)
 def calcul_top_periode(sous_df, nom_periode):
     totaux = sous_df.groupby('CTY_NAME')[['droits_douane', 'importations_generales']].sum()
     totaux['taux'] = (totaux['droits_douane'] / totaux['importations_generales']) * 100
@@ -152,25 +129,19 @@ def calcul_top_periode(sous_df, nom_periode):
 calcul_top_periode(periode_historique, "2010-2024")
 calcul_top_periode(periode_recente, "2025-2026")
 
-
-# 11 Résultats significatifs ? 
-from scipy import stats
-
-# Isoler les séries de données propres (sans les anomalies)
+# 11. Test statistique
 série_historique = periode_historique['douane_pourcentage']
 série_recente = periode_recente['douane_pourcentage']
 
-# Réaliser un test de Student (t-test) pour comparer les moyennes
 t_stat, p_value = stats.ttest_ind(série_historique, série_recente, equal_var=False)
 
-# Afficher les résultats
 print("=" * 65)
 print("TEST STATISTIQUE DE COMPARAISON DES MOYENNES (BALANCE CHECK)")
 print("=" * 65)
 print(f"Moyenne 2010-2024 : {série_historique.mean():.2f} %")
 print(f"Moyenne 2025-2026 : {série_recente.mean():.2f} %")
 print(f"Statistique t     : {t_stat:.4f}")
-print(f"P-value           : {p_value:.4e}")  # Format scientifique
+print(f"P-value           : {p_value:.4e}")
 
 if p_value < 0.001:
     print("\n Résultat : La différence est TRES SIGNIFICATIVE (p < 0.001).")
