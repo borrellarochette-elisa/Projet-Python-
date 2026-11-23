@@ -7,60 +7,59 @@ from scipy import stats
 # 1 & 2. Chargement des données directement depuis le stockage cloud (MinIO)
 url = "https://minio.lab.sspcloud.fr/elisaborrel/diffusion/commerce_usa/commerce_usa_2010_2025.csv"
 commerce_usa = pd.read_csv(url, dtype={"CTY_CODE": str})
-df = commerce_usa.copy()
 
 # 3. Vérification du chargement
 print("--- Dataset chargé avec succès ! ---")
-print(f"Dimensions : {df.shape[0]} lignes et {df.shape[1]} colonnes")
+print(f"Dimensions : {commerce_usa.shape[0]} lignes et {commerce_usa.shape[1]} colonnes")
 print("\nAperçu des 5 premières lignes :")
-print(df.head())
+print(commerce_usa.head())
 
 # 4. Création sécurisée de la colonne de pourcentage (anti-division par zéro et anti-inf)
-df['douane_pourcentage'] = 0.0
-masque = df['importations_generales'] > 0
-df.loc[masque, 'douane_pourcentage'] = (
-    df.loc[masque, 'droits_douane'] / df.loc[masque, 'importations_generales']
+commerce_usa['douane_pourcentage'] = 0.0
+masque = commerce_usa['importations_generales'] > 0
+commerce_usa.loc[masque, 'douane_pourcentage'] = (
+    commerce_usa.loc[masque, 'droits_douane'] / commerce_usa.loc[masque, 'importations_generales']
 ) * 100
-df['douane_pourcentage'] = df['douane_pourcentage'].replace([np.inf, -np.inf], 0).fillna(0)
+commerce_usa['douane_pourcentage'] = commerce_usa['douane_pourcentage'].replace([np.inf, -np.inf], 0).fillna(0)
 
 # 5. Aperçus et vérifications
 print("\nAperçu avec la colonne douane_pourcentage :")
-print(df[['CTY_NAME', 'time', 'importations_generales', 'droits_douane', 'douane_pourcentage']].head())
+print(commerce_usa[['CTY_NAME', 'time', 'importations_generales', 'droits_douane', 'douane_pourcentage']].head())
 
 print("\nNombre de lignes avec des droits de douane strictement supérieurs à 0 :")
 print(
-    df[df['droits_douane'] > 0][
+    commerce_usa[commerce_usa['droits_douane'] > 0][
         ['CTY_NAME', 'time', 'importations_generales', 'droits_douane', 'douane_pourcentage']
     ].shape
 )
 
-print("\nValeur max des droits de douane :", df['droits_douane'].max())
+print("\nValeur max des droits de douane :", commerce_usa['droits_douane'].max())
 
 # 6. Statistiques descriptives de la nouvelle colonne
 print("\n" + "=" * 65)
 print("STATISTIQUES DESCRIPTIVES : douane_pourcentage")
 print("=" * 65)
-print(df['douane_pourcentage'].describe().round(4))
+print(commerce_usa['douane_pourcentage'].describe().round(4))
 
 # 6bis. Taux non nuls
-df_avec_douanes = df[df['douane_pourcentage'] > 0]
-print(f"\nNombre de lignes avec un taux de douane non nul : {len(df_avec_douanes)} sur {len(df)} total")
+commerce_usa_avec_douanes = commerce_usa[commerce_usa['douane_pourcentage'] > 0]
+print(f"\nNombre de lignes avec un taux de douane non nul : {len(commerce_usa_avec_douanes)} sur {len(commerce_usa)} total")
 
 print("\n" + "=" * 65)
 print("STATISTIQUES DESCRIPTIVES : douane_pourcentage (Taux > 0 %)")
 print("=" * 65)
-print(df_avec_douanes['douane_pourcentage'].describe().round(4))
+print(commerce_usa_avec_douanes['douane_pourcentage'].describe().round(4))
 
 # 6bis'. Taux non nuls et <= 200 %
-df_filtre = df[(df['douane_pourcentage'] > 0) & (df['douane_pourcentage'] <= 200)]
-print(f"Nombre de lignes après nettoyage des anomalies : {len(df_filtre)} sur {len(df)}")
+commerce_usa_filtre = commerce_usa[(commerce_usa['douane_pourcentage'] > 0) & (commerce_usa['douane_pourcentage'] <= 200)]
+print(f"Nombre de lignes après nettoyage des anomalies : {len(commerce_usa_filtre)} sur {len(commerce_usa)}")
 print("\n" + "=" * 65)
 print("STATISTIQUES DESCRIPTIVES : douane_pourcentage (Taux entre 0% et 200%)")
 print("=" * 65)
-print(df_filtre['douane_pourcentage'].describe().round(4))
+print(commerce_usa_filtre['douane_pourcentage'].describe().round(4))
 
 # 7. Analyse des anomalies (taux strictement supérieur à 200 %)
-anomalies = df[df['douane_pourcentage'] > 200].sort_values(
+anomalies = commerce_usa[commerce_usa['douane_pourcentage'] > 200].sort_values(
     by='douane_pourcentage', ascending=False
 )
 
@@ -74,11 +73,11 @@ print(
 )
 
 # 8. Evolution temporelle des droits de douane
-df['time'] = pd.to_datetime(df['time'])
-df_temp = df[df['douane_pourcentage'] <= 200].groupby('time')['douane_pourcentage'].mean().reset_index()
+commerce_usa['time'] = pd.to_datetime(commerce_usa['time'])
+commerce_usa_temp = commerce_usa[commerce_usa['douane_pourcentage'] <= 200].groupby('time')['douane_pourcentage'].mean().reset_index()
 
 plt.figure(figsize=(12, 6))
-sns.lineplot(data=df_temp, x='time', y='douane_pourcentage', color='b', linewidth=2)
+sns.lineplot(data=commerce_usa_temp, x='time', y='douane_pourcentage', color='b', linewidth=2)
 plt.title("Évolution mensuelle du taux de douane moyen (2010-2025)")
 plt.xlabel("Année")
 plt.ylabel("Taux de douane moyen (%)")
@@ -87,7 +86,7 @@ plt.savefig("evolution_douanes.png", dpi=300, bbox_inches="tight")
 print("Graphique sauvegardé avec succès sous 'evolution_douanes.png' !")
 
 # 9. Top 10 (en ignorant les anomalies > 200 %)
-totaux_pays = df[df['douane_pourcentage'] <= 200].groupby('CTY_NAME')[['droits_douane', 'importations_generales']].sum()
+totaux_pays = commerce_usa[commerce_usa['douane_pourcentage'] <= 200].groupby('CTY_NAME')[['droits_douane', 'importations_generales']].sum()
 totaux_pays['taux_global'] = (totaux_pays['droits_douane'] / totaux_pays['importations_generales']) * 100
 
 top_10 = totaux_pays['taux_global'].sort_values(ascending=True).tail(10)
@@ -104,13 +103,13 @@ plt.close()
 print("Graphique 2 sauvegardé : top10_taux_douane.png")
 
 # 10. Evolution moyenne des droits de douane : comparaison dans le temps
-df['time_dt'] = pd.to_datetime(df['time'])
-df['annee'] = df['time_dt'].dt.year
+commerce_usa['time_dt'] = pd.to_datetime(commerce_usa['time'])
+commerce_usa['annee'] = commerce_usa['time_dt'].dt.year
 
-df_propre = df[(df['douane_pourcentage'] > 0) & (df['douane_pourcentage'] <= 200)].copy()
+commerce_usa_propre = commerce_usa[(commerce_usa['douane_pourcentage'] > 0) & (commerce_usa['douane_pourcentage'] <= 200)].copy()
 
-periode_historique = df_propre[df_propre['annee'] < 2025]
-periode_recente = df_propre[df_propre['annee'] >= 2025]
+periode_historique = commerce_usa_propre[commerce_usa_propre['annee'] < 2025]
+periode_recente = commerce_usa_propre[commerce_usa_propre['annee'] >= 2025]
 
 print("=" * 65)
 print("COMPARAISON DES TAUX DE DOUANE MOYENS ENTRE LES PÉRIODES")
@@ -118,8 +117,8 @@ print("=" * 65)
 print(f"Moyenne (2010 - 2024) : {periode_historique['douane_pourcentage'].mean():.2f} %")
 print(f"Moyenne récente (2025 - 2026) : {periode_recente['douane_pourcentage'].mean():.2f} %")
 
-def calcul_top_periode(sous_df, nom_periode):
-    totaux = sous_df.groupby('CTY_NAME')[['droits_douane', 'importations_generales']].sum()
+def calcul_top_periode(sous_commerce_usa, nom_periode):
+    totaux = sous_commerce_usa.groupby('CTY_NAME')[['droits_douane', 'importations_generales']].sum()
     totaux['taux'] = (totaux['droits_douane'] / totaux['importations_generales']) * 100
     top = totaux['taux'].sort_values(ascending=False).head(5)
     print(f"\n--- Top 5 des pays ({nom_periode}) ---")
