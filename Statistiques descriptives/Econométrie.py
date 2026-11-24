@@ -119,6 +119,25 @@ did_controles = smf.ols(
 ).fit(cov_type="cluster", cov_kwds={"groups" : reg["ISO3"]})
 print(did_controles.summary())
 
+# Vérifications sur l'échantillon du DiD
+pays = set(df_DiD_filtered["ISO3"])
+pib = df_wb[df_wb["annee"] == 2024].dropna(subset=["pib_usd"]).sort_values("pib_usd", ascending=False)
+dans_ech = pib["ISO3"].isin(pays)
+
+print("\n" + "-" * 80)
+print("VÉRIFICATIONS SUR L'ÉCHANTILLON DU DiD")
+print("-" * 80)
+
+print(f"{len(pays)} pays, dont {df_DiD_filtered['traite'].sum()} traités")
+print(f"Part dans le top 170 du PIB : {len(pays & set(pib['ISO3'].head(170))) / len(pays):.0%}")
+print(f"PIB médian : {pib.loc[dans_ech, 'pib_usd'].median() / 1e9:.1f} Md$ dans l'échantillon, "
+      f"{pib.loc[~dans_ech, 'pib_usd'].median() / 1e9:.1f} Md$ hors échantillon")
+
+# Pays perdus avec les contrôles
+perdus = df_DiD_filtered[~df_DiD_filtered["ISO3"].isin(reg["ISO3"])]
+print(f"Perdus : {perdus['traite'].sum()} traités, {(perdus['traite'] == 0).sum()} témoins, "
+      f"{perdus['importations_generales_avant'].sum() / df_DiD_filtered['importations_generales_avant'].sum():.1%} des importations")
+
 print(
     "\n" + "-" * 80 + "\n"
     "Sur les partenaires exportant au moins 1 M$/mois d'importations_generales US avant avril 2025, "
