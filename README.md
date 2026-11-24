@@ -13,7 +13,7 @@ Le dossier Projet-Python comporte :
 Pour plus de détails, notamment sur l'importation des données les dossiers suivant sont également disponibles :
 - Un dossier Importation des données : 2 scripts qui permettent l'importation par API des données utilisées ainsi qu'un script permettant la création du jeu de données final.
 - Un dossier Statistiques descriptives : 3 scripts dont Manipulation des données.py qui s'intéresse aux droits de douane, Cartes.py pour afficher les cartes dynamiques ainsi que Econométrie.py qui réalise la partie économétrique du projet.
-- Un dossier données complémentaires : script qui permet d'importer des données complémentaires provenant de la Banque Mondiake et du CEPII utiles pour les contrôles en économétrie.
+- Un dossier données complémentaires : script qui permet d'importer des données complémentaires provenant de la Banque Mondiale et du CEPII utiles pour les contrôles en économétrie.
 
 **Remarque :**
 Du fait de l'importation par API, la récupération du jeu de données peut prendre plusieurs heures. Pour éviter ce temps le téléchargement des différents fichiers csv se fait dans un dossier data exclu du dépôt GitHub. La base finale est conservée sur le stockage S3 de SSP Cloud et accessible par un lien public. Le notebook charge directement ce fichier, sans relancer les requêtes auprès du Census Bureau.Les scripts sont conservés dans le dépôt, la reconstruction restant donc possible.
