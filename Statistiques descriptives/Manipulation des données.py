@@ -4,15 +4,45 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 
-# 1 & 2. Chargement des données directement depuis le stockage cloud (MinIO)
+# 1. Chargement des données directement depuis le stockage cloud (MinIO)
 url = "https://minio.lab.sspcloud.fr/elisaborrel/diffusion/commerce_usa/commerce_usa_2010_2025.csv"
 commerce_usa = pd.read_csv(url, dtype={"CTY_CODE": str})
 
-# 3. Vérification du chargement
+# 2. Vérification du chargement
 print("--- Dataset chargé avec succès ! ---")
 print(f"Dimensions : {commerce_usa.shape[0]} lignes et {commerce_usa.shape[1]} colonnes")
 print("\nAperçu des 5 premières lignes :")
 print(commerce_usa.head())
+
+# 3. Statistiques descriptives sur les importations
+
+print("\n" + "=" * 65)
+print("STATISTIQUES DESCRIPTIVES : importations_generales (USD)")
+print("=" * 65)
+print(commerce_usa['importations_generales'].describe().round(2))
+
+print("\nNombre de lignes avec importations générales > 0 :", (commerce_usa['importations_generales'] > 0).sum())
+print("Nombre de partenaires distincts (CTY_NAME) :", commerce_usa['CTY_NAME'].nunique())
+
+# 3bis. Évolution mensuelle des importations générales totales (en milliards d'USD)
+commerce_usa['time'] = pd.to_datetime(commerce_usa['time'])
+imports_mensuelles = (
+    commerce_usa.groupby('time')['importations_generales']
+    .sum()
+    .reset_index()
+)
+imports_mensuelles['imports_milliards'] = imports_mensuelles['importations_generales'] / 1e9
+
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=imports_mensuelles, x='time', y='imports_milliards', color='#1f77b4', linewidth=2)
+plt.title("Évolution mensuelle des importations générales des États-Unis (2010-2025)")
+plt.xlabel("Année")
+plt.ylabel("Importations générales totales (milliards USD)")
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.tight_layout()
+plt.savefig("evolution_importations.png", dpi=300, bbox_inches="tight")
+plt.show()
+print("Graphique sauvegardé avec succès sous 'evolution_importations.png' !")
 
 # 4. Création sécurisée de la colonne de pourcentage (anti-division par zéro et anti-inf)
 commerce_usa['douane_pourcentage'] = 0.0
